@@ -1,4 +1,4 @@
-from config.config_file import IMAGE_MODEL_NAME
+from config.config_file import WRITE_MODEL_NAME
 
 def score_resume(client ,resume_text: str, job_text: str):
     grader_prompt = f"""
@@ -14,7 +14,7 @@ def score_resume(client ,resume_text: str, job_text: str):
     """
 
     response = client.chat.completions.create(
-        model = IMAGE_MODEL_NAME,
+        model = WRITE_MODEL_NAME,
         messages = [{"role":"user", "content": grader_prompt}],
         response_format = {"type": "json_object"}
     )
@@ -43,7 +43,7 @@ def rewrite_section(client, resume_text, job_text, grader_feedback):
     """
 
     response = client.chat.completions.create(
-        model = IMAGE_MODEL_NAME,
+        model = WRITE_MODEL_NAME,
         messages = [{"role": "user", "content": prompt}]
     )
 
