@@ -4,6 +4,8 @@ import streamlit as st
 import streamlit.components.v1 as components
 from openai import OpenAI
 from PIL import Image
+from src.extracter import ImageExtractor
+from src.agent import run_agent
 
 client = OpenAI(
     base_url="https://api.groq.com/openai/v1", api_key=os.environ.get("GROQ_API_KEY")
@@ -73,30 +75,24 @@ with col2:
 
 
 def process_files(resume_file, jd_file):
-    """Placeholder processing function.
+    resume_name = resume_file.name
+    jd_name = jd_file.name
+    resume_contnt = None
+    jd_contnt = None
+    extracter = ImageExtractor()
+    #Process resume file
+    if resume_name.split(".")[-1].lower() in ('png','jpg','jpeg'):
+        resume_contnt = extracter.resume_extract(client, resume_file)
+    elif resume_name.split(".")[-1].lower() == 'pdf':
+        resume_contnt = resume_file.read()
 
-    Replace the body of this function with the real processing you want to run
-    (parsing PDFs, calling an API, comparing skills, etc.). It should accept
-    the uploaded file-like objects returned by the file_uploader widgets.
-    """
-    # Basic validation
-    if resume_file is None and jd_file is None:
-        return "No files provided"
+    if jd_name.split(".")[-1].lower() in ('png', 'jpg', 'jpeg'):
+        jd_contnt = extracter.job_extract(client, jd_file)
+    elif resume_name.split(".")[-1].lower() == "pdf":
+        jd_contnt = jd_file.read()
 
-    results = []
-
-    if resume_file is not None:
-        results.append(
-            f"Resume: {resume_file.name} ({len(resume_file.getvalue()) if hasattr(resume_file, 'getvalue') else 'size unknown'} bytes)"
-        )
-    if jd_file is not None:
-        results.append(
-            f"Job description: {jd_file.name} ({len(jd_file.getvalue()) if hasattr(jd_file, 'getvalue') else 'size unknown'} bytes)"
-        )
-
-    # Example result (replace with actual logic)
-    return "\n".join(results)
-
+    result = run_agent(client, resume_contnt, jd_contnt)
+    return result
 
 # Place the button below the uploaders and call `process_files` when clicked
 if st.button("Process"):
@@ -107,5 +103,4 @@ if st.button("Process"):
             st.text_area("Output", value=output, height=200)
         except Exception as e:
             st.error(f"Processing failed: {e}")
-
 # End of process streamlit

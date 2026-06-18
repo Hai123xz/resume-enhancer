@@ -1,6 +1,6 @@
 import json
 
-from config.config_file import IMAGE_MODEL_NAME
+from config.config_file import IMAGE_MODEL_NAME, WRITE_MODEL_NAME
 from src.utils import rewrite_section, score_resume
 
 tools = [
@@ -52,7 +52,7 @@ def run_agent(client, resume_text, job_description):
 
     while True:
         response = client.chat.completions.create(
-            model=MODEL_NAME, messages=messages, tools=tools, tool_choice="auto"
+            model=WRITE_MODEL_NAME, messages=messages, tools=tools, tool_choice="auto"
         )
 
         msg = response.choices[0].message
