@@ -14,6 +14,7 @@ if str(ROOT_DIR) not in sys.path:
 
 from src.extracter import ImageExtractor
 from src.agent import run_agent
+from src.pdf_generator import resume_markdown_to_pdf_bytes
 
 client = OpenAI(
     base_url="https://api.groq.com/openai/v1", api_key=os.environ["GROQ_API_KEY"]
@@ -124,8 +125,15 @@ if st.button("Process"):
     with st.spinner("Processing files..."):
         try:
             output = process_files(resume, jd)
+            pdf_bytes = resume_markdown_to_pdf_bytes(output)
             st.success("Processing complete")
             st.text_area("Output", value=output, height=200)
+            st.download_button(
+                "Download Harvard Resume PDF",
+                data=pdf_bytes,
+                file_name="harvard_resume.pdf",
+                mime="application/pdf",
+            )
         except Exception as e:
             st.error(f"Processing failed: {e}")
 # End of process streamlit

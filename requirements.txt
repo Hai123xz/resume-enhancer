@@ -4,3 +4,4 @@ pdfplumber
 python-docx
 Pillow
 pytesseract
+reportlab
