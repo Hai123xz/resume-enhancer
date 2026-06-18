@@ -1,21 +1,25 @@
 import html
 import io
 import re
+import unicodedata
 from functools import lru_cache
 from pathlib import Path
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from reportlab.lib.fonts import addMapping
-from reportlab.lib.pagesizes import LETTER
+from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.lib.units import inch
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
+from reportlab.platypus import HRFlowable, Paragraph, SimpleDocTemplate, Spacer
 
 
 SECTION_NAMES = {
+    "career objective",
+    "objective",
+    "summary",
     "education",
     "experience",
     "work experience",
@@ -27,6 +31,7 @@ SECTION_NAMES = {
     "awards",
     "leadership",
     "activities",
+    "muc tieu nghe nghiep",
     "hoc van",
     "kinh nghiem",
     "kinh nghiem lam viec",
@@ -42,29 +47,35 @@ SECTION_NAMES = {
 @lru_cache(maxsize=1)
 def _register_resume_fonts():
     """
-    Register Unicode TrueType fonts for Vietnamese and other non-ASCII text.
+    Register embedded Unicode fonts.
 
-    ReportLab's built-in Helvetica font cannot render Vietnamese accents. Streamlit
-    Cloud usually has DejaVu installed, and local Windows machines usually have
-    Arial, so we search those paths and embed the first available font family.
+    The black boxes came from unsupported glyphs and special Unicode punctuation.
+    These font families support Vietnamese on Streamlit Cloud and local Windows.
     """
     candidates = [
         {
-            "family": "DejaVuSansResume",
+            "family": "ResumeSerif",
+            "regular": "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
+            "bold": "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+            "italic": "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf",
+            "bold_italic": "/usr/share/fonts/truetype/dejavu/DejaVuSerif-BoldItalic.ttf",
+        },
+        {
+            "family": "ResumeSans",
             "regular": "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
             "bold": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
             "italic": "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf",
             "bold_italic": "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf",
         },
         {
-            "family": "LiberationSansResume",
-            "regular": "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
-            "bold": "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf",
-            "italic": "/usr/share/fonts/truetype/liberation2/LiberationSans-Italic.ttf",
-            "bold_italic": "/usr/share/fonts/truetype/liberation2/LiberationSans-BoldItalic.ttf",
+            "family": "ResumeTimes",
+            "regular": "C:/Windows/Fonts/times.ttf",
+            "bold": "C:/Windows/Fonts/timesbd.ttf",
+            "italic": "C:/Windows/Fonts/timesi.ttf",
+            "bold_italic": "C:/Windows/Fonts/timesbi.ttf",
         },
         {
-            "family": "ArialResume",
+            "family": "ResumeArial",
             "regular": "C:/Windows/Fonts/arial.ttf",
             "bold": "C:/Windows/Fonts/arialbd.ttf",
             "italic": "C:/Windows/Fonts/ariali.ttf",
@@ -78,16 +89,11 @@ def _register_resume_fonts():
             continue
 
         family = candidate["family"]
-        regular_name = family
-        bold_name = f"{family}-Bold"
-        italic_name = f"{family}-Italic"
-        bold_italic_name = f"{family}-BoldItalic"
-
         variants = {
-            "regular": (regular_name, regular_path),
-            "bold": (bold_name, Path(candidate["bold"])),
-            "italic": (italic_name, Path(candidate["italic"])),
-            "bold_italic": (bold_italic_name, Path(candidate["bold_italic"])),
+            "regular": (family, regular_path),
+            "bold": (f"{family}-Bold", Path(candidate["bold"])),
+            "italic": (f"{family}-Italic", Path(candidate["italic"])),
+            "bold_italic": (f"{family}-BoldItalic", Path(candidate["bold_italic"])),
         }
 
         for key, (font_name, font_path) in list(variants.items()):
@@ -110,59 +116,82 @@ def _register_resume_fonts():
         }
 
     return {
-        "regular": "Helvetica",
-        "bold": "Helvetica-Bold",
-        "italic": "Helvetica-Oblique",
-        "bold_italic": "Helvetica-BoldOblique",
-        "family": "Helvetica",
+        "regular": "Times-Roman",
+        "bold": "Times-Bold",
+        "italic": "Times-Italic",
+        "bold_italic": "Times-BoldItalic",
+        "family": "Times-Roman",
     }
 
 
-def _strip_vietnamese_accents(text: str) -> str:
+def _normalize_text(text: str) -> str:
+    """Normalize troublesome text before it reaches ReportLab."""
+    text = unicodedata.normalize("NFC", text)
     replacements = {
-        "áàảãạăắằẳẵặâấầẩẫậ": "a",
-        "ÁÀẢÃẠĂẮẰẲẴẶÂẤẦẨẪẬ": "A",
-        "éèẻẽẹêếềểễệ": "e",
-        "ÉÈẺẼẸÊẾỀỂỄỆ": "E",
-        "íìỉĩị": "i",
-        "ÍÌỈĨỊ": "I",
-        "óòỏõọôốồổỗộơớờởỡợ": "o",
-        "ÓÒỎÕỌÔỐỒỔỖỘƠỚỜỞỠỢ": "O",
-        "úùủũụưứừửữự": "u",
-        "ÚÙỦŨỤƯỨỪỬỮỰ": "U",
-        "ýỳỷỹỵ": "y",
-        "ÝỲỶỸỴ": "Y",
-        "đ": "d",
-        "Đ": "D",
+        "\u00a0": " ",
+        "\u00ad": "",
+        "\u200b": "",
+        "\u200c": "",
+        "\u200d": "",
+        "\ufeff": "",
+        "\u2010": "-",
+        "\u2011": "-",
+        "\u2012": "-",
+        "\u2013": "-",
+        "\u2014": "-",
+        "\u2212": "-",
+        "\u2018": "'",
+        "\u2019": "'",
+        "\u201c": '"',
+        "\u201d": '"',
+        "\ufffd": "",
     }
-    table = {}
-    for chars, replacement in replacements.items():
-        for char in chars:
-            table[ord(char)] = replacement
-    return text.translate(table)
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    # If an extracted resume already contains black-square placeholders, remove
+    # spacing artifacts and treat word-internal squares as hyphens.
+    text = re.sub(r"(?<=\w)[\u25a0\u25a1\u25aa\u25ab](?=\w)", "-", text)
+    text = re.sub(r"[\u25a0\u25a1\u25aa\u25ab]", "", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    return text.strip()
+
+
+def _ascii_key(text: str) -> str:
+    text = _normalize_text(text)
+    text = unicodedata.normalize("NFD", text)
+    text = "".join(char for char in text if unicodedata.category(char) != "Mn")
+    text = text.replace("đ", "d").replace("Đ", "D")
+    return text.lower().strip()
 
 
 def _clean_line(line: str) -> str:
-    line = line.strip()
+    line = _normalize_text(line)
     line = re.sub(r"^#{1,6}\s*", "", line)
     line = re.sub(r"^\*\*(.+)\*\*$", r"\1", line)
     return line.strip()
 
 
 def _inline_markup(text: str) -> str:
-    text = html.escape(text.strip())
+    text = html.escape(_normalize_text(text))
     text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
     text = re.sub(r"\*(.+?)\*", r"<i>\1</i>", text)
     return text
 
 
 def _is_section_header(line: str) -> bool:
-    clean = _strip_vietnamese_accents(_clean_line(line).rstrip(":")).lower()
+    clean = _ascii_key(_clean_line(line).rstrip(":"))
     return clean in SECTION_NAMES
 
 
 def _split_resume_lines(resume_text: str):
+    resume_text = _normalize_text(resume_text)
     return [_clean_line(line) for line in resume_text.splitlines() if line.strip()]
+
+
+def _looks_like_contact(line: str) -> bool:
+    lower = line.lower()
+    return any(token in lower for token in ("@", "phone", "github", "linkedin", "http"))
 
 
 def _build_styles():
@@ -174,9 +203,20 @@ def _build_styles():
             parent=styles["Normal"],
             alignment=TA_CENTER,
             fontName=font["bold"],
-            fontSize=16,
-            leading=18,
+            fontSize=14,
+            leading=16,
             spaceAfter=3,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name="Subtitle",
+            parent=styles["Normal"],
+            alignment=TA_CENTER,
+            fontName=font["regular"],
+            fontSize=9.3,
+            leading=11,
+            spaceAfter=5,
         )
     )
     styles.add(
@@ -185,9 +225,9 @@ def _build_styles():
             parent=styles["Normal"],
             alignment=TA_CENTER,
             fontName=font["regular"],
-            fontSize=9,
-            leading=11,
-            spaceAfter=8,
+            fontSize=8.4,
+            leading=10,
+            spaceAfter=12,
         )
     )
     styles.add(
@@ -196,13 +236,11 @@ def _build_styles():
             parent=styles["Normal"],
             alignment=TA_LEFT,
             fontName=font["bold"],
-            fontSize=10,
-            leading=12,
+            fontSize=9.8,
+            leading=11.5,
             textColor=colors.black,
-            borderWidth=0,
-            borderPadding=0,
             spaceBefore=8,
-            spaceAfter=4,
+            spaceAfter=1.5,
         )
     )
     styles.add(
@@ -210,8 +248,8 @@ def _build_styles():
             name="Body",
             parent=styles["Normal"],
             fontName=font["regular"],
-            fontSize=9.4,
-            leading=11.6,
+            fontSize=8.4,
+            leading=10.2,
             spaceAfter=3,
         )
     )
@@ -220,26 +258,36 @@ def _build_styles():
             name="BodyBold",
             parent=styles["Body"],
             fontName=font["bold"],
+            spaceBefore=2,
+            spaceAfter=2,
         )
     )
     styles.add(
         ParagraphStyle(
             name="ResumeBullet",
             parent=styles["Body"],
-            leftIndent=14,
+            leftIndent=11,
             firstLineIndent=0,
-            bulletIndent=4,
+            bulletIndent=3,
             bulletFontName=font["regular"],
-            bulletFontSize=7,
-            spaceAfter=2,
+            bulletFontSize=6.5,
+            spaceAfter=1.5,
         )
     )
     return styles
 
 
 def _add_section_header(story, styles, title: str):
-    story.append(Paragraph(title.upper(), styles["Section"]))
-    story.append(Spacer(1, 1))
+    story.append(Paragraph(_normalize_text(title).upper(), styles["Section"]))
+    story.append(
+        HRFlowable(
+            width="100%",
+            thickness=0.65,
+            color=colors.black,
+            spaceBefore=0,
+            spaceAfter=5,
+        )
+    )
 
 
 def _flush_bullets(story, styles, bullets):
@@ -248,25 +296,24 @@ def _flush_bullets(story, styles, bullets):
 
     for item in bullets:
         story.append(
-            Paragraph(_inline_markup(item), styles["ResumeBullet"], bulletText="\u2022")
+            Paragraph(_inline_markup(item), styles["ResumeBullet"], bulletText="-")
         )
 
 
 def resume_markdown_to_pdf_bytes(resume_text: str) -> bytes:
     """
-    Render agent resume text as a Harvard-style PDF.
-
-    The format is intentionally conservative for technical students: centered
-    identity, one-column sections, simple headings, and dense achievement bullets.
+    Render agent resume text as a Harvard-style PDF resembling the template:
+    centered identity, compact serif typography, ruled section headers, and
+    tight bullets suitable for technical-student resumes.
     """
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
-        pagesize=LETTER,
-        rightMargin=0.6 * inch,
-        leftMargin=0.6 * inch,
-        topMargin=0.55 * inch,
-        bottomMargin=0.55 * inch,
+        pagesize=A4,
+        rightMargin=0.42 * inch,
+        leftMargin=0.42 * inch,
+        topMargin=0.35 * inch,
+        bottomMargin=0.35 * inch,
         title="Optimized Resume",
     )
     styles = _build_styles()
@@ -279,13 +326,16 @@ def resume_markdown_to_pdf_bytes(resume_text: str) -> bytes:
     name = lines.pop(0)
     story.append(Paragraph(_inline_markup(name), styles["ResumeName"]))
 
+    if lines and not _looks_like_contact(lines[0]) and not _is_section_header(lines[0]):
+        story.append(Paragraph(_inline_markup(lines.pop(0)), styles["Subtitle"]))
+
     if lines and not _is_section_header(lines[0]):
         story.append(Paragraph(_inline_markup(lines.pop(0)), styles["Contact"]))
 
     bullets = []
     for line in lines:
-        is_bullet = line.startswith(("-", "*", "\u2022"))
-        cleaned = re.sub(r"^[-*\u2022]\s*", "", line).strip()
+        is_bullet = line.startswith(("-", "*", "\u2022", "\u00b7"))
+        cleaned = re.sub(r"^[-*\u2022\u00b7]\s*", "", line).strip()
 
         if _is_section_header(line):
             _flush_bullets(story, styles, bullets)
@@ -300,7 +350,8 @@ def resume_markdown_to_pdf_bytes(resume_text: str) -> bytes:
         else:
             _flush_bullets(story, styles, bullets)
             bullets = []
-            story.append(Paragraph(_inline_markup(line), styles["Body"]))
+            style = styles["BodyBold"] if re.search(r"\b(20\d{2}|19\d{2})\b", line) else styles["Body"]
+            story.append(Paragraph(_inline_markup(line), style))
 
     _flush_bullets(story, styles, bullets)
     doc.build(story)

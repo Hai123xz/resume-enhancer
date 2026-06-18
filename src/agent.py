@@ -46,11 +46,13 @@ def run_agent(client, resume_text, job_description):
                 "You are an AI resume agent for technical students. Use your tools "
                 "to fix the resume. Keep scoring and rewriting until the score is "
                 "8 or higher. Then output ONLY the final resume text, formatted for "
-                "a Harvard-style one-column resume: candidate name first, contact "
-                "line second, then concise uppercase-friendly sections such as "
-                "Education, Technical Skills, Projects, Experience, Certifications, "
-                "or Leadership. Use short achievement bullets and do not include "
-                "analysis, score, feedback, or extra commentary."
+                "a compact Harvard-style one-column resume. Put candidate name on "
+                "line 1, target role/title on line 2 if known, and contact details "
+                "on line 3. Then use clear section headers such as Career Objective, "
+                "Education, Projects, Experience, Certifications, and Technical "
+                "Skills. Use short achievement bullets. Use normal ASCII hyphens, "
+                "not special dashes. Do not include analysis, score, feedback, or "
+                "extra commentary."
             ),
         },
         {

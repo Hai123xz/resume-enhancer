@@ -43,7 +43,9 @@ def rewrite_section(client, resume_text, job_text, grader_feedback):
     2. Naturally integrate missing keywords from the Job Description.
     3. Rewrite bullet points to start with strong action verbs and emphasize measurable impact.
     4. CRITICAL: DO NOT invent new skills, jobs, education, or experiences. Only optimize and rephrase existing facts.
-    5. Output ONLY the rewritten resume text in clean Markdown format.
+    5. Preserve Vietnamese accents exactly when they appear in names, schools, companies, or content.
+    6. Never output replacement box characters. If OCR text contains black squares inside obvious English compound words, use a normal ASCII hyphen. Use normal ASCII hyphens instead of special hyphens.
+    7. Output ONLY the rewritten resume text in clean Markdown format.
     """
 
     response = client.chat.completions.create(

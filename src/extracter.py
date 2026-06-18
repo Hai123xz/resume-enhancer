@@ -50,7 +50,10 @@ class ImageExtractor:
                             "type": "text",
                             "text": (
                                 f"Extract all readable text from this {document_type} page. "
-                                'Return ONLY valid JSON as {"raw_text": "..."} with original wording.'
+                                "Preserve Vietnamese accents exactly. Do not output replacement "
+                                "box characters. Use normal ASCII hyphens instead of special "
+                                'hyphens. Return ONLY valid JSON as {"raw_text": "..."} with '
+                                "original wording."
                             ),
                         },
                         {"type": "image_url", "image_url": {"url": data_url}},
@@ -125,7 +128,9 @@ class ImageExtractor:
                                 "Extract this resume from the image. Return ONLY valid JSON "
                                 'with this shape: {"name": ..., "contact": ..., '
                                 '"experience": [...], "education": [...], "skills": [...], '
-                                '"raw_text": "..."}. Keep original wording in raw_text.'
+                                '"raw_text": "..."}. Preserve Vietnamese accents exactly. '
+                                "Do not output replacement box characters. Use normal ASCII "
+                                "hyphens instead of special hyphens. Keep original wording in raw_text."
                             ),
                         },
                         {"type": "image_url", "image_url": {"url": data_url}},
@@ -156,7 +161,9 @@ class ImageExtractor:
                                 "Extract this job description from the image. Return ONLY "
                                 'valid JSON with this shape: {"title": ..., "company": ..., '
                                 '"requirements": [...], "raw_text": "..."}. Keep original '
-                                "wording in raw_text."
+                                "wording in raw_text. Preserve Vietnamese accents exactly. "
+                                "Do not output replacement box characters. Use normal ASCII "
+                                "hyphens instead of special hyphens."
                             ),
                         },
                         {"type": "image_url", "image_url": {"url": data_url}},
