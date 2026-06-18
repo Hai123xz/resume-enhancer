@@ -2,7 +2,7 @@
 # The app provides an OpenAI-compatible client; this module expects a client to be
 # passed into the methods (it no longer requires the `groq` SDK to be importable
 # at module import time).
-from config.config_file import MODEL_NAME
+from config.config_file import IMAGE_MODEL_NAME
 
 
 class ImageExtractor:

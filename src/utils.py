@@ -1,4 +1,4 @@
-from config.config_file import MODEL_NAME
+from config.config_file import IMAGE_MODEL_NAME
 
 def score_resume(client ,resume_text: str, job_text: str):
     grader_prompt = f"""

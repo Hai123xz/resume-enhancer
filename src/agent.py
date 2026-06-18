@@ -1,6 +1,6 @@
 import json
 
-from config.config_file import MODEL_NAME
+from config.config_file import IMAGE_MODEL_NAME
 from src.utils import rewrite_section, score_resume
 
 tools = [
