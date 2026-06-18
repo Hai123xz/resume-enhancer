@@ -4,7 +4,11 @@ import json
 
 import pdfplumber
 
-from config.config_file import IMAGE_MODEL_NAME
+try:
+    from config.config_file import IMAGE_MODEL_NAME
+except ImportError:
+    # Deployment guard: keep Streamlit Cloud from crashing if config is stale.
+    IMAGE_MODEL_NAME = "meta-llama/llama-4-scout-17b-16e-instruct"
 
 
 class ImageExtractor:

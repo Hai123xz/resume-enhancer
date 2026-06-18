@@ -1,4 +1,8 @@
-from config.config_file import WRITE_MODEL_NAME
+try:
+    from config.config_file import WRITE_MODEL_NAME
+except ImportError:
+    # Deployment guard: text-only agent calls should use the Groq text model.
+    WRITE_MODEL_NAME = "llama3-70b-8192"
 
 def score_resume(client ,resume_text: str, job_text: str):
     grader_prompt = f"""
