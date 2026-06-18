@@ -6,7 +6,7 @@ from config.config_file import IMAGE_MODEL_NAME
 
 
 class ImageExtractor:
-    def __init__(self, model_name=MODEL_NAME):
+    def __init__(self, model_name=IMAGE_MODEL_NAME):
         self.model_name = model_name
 
     def resume_extract(self, client, image_path):
