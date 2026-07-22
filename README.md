@@ -3,4 +3,4 @@
 - Run pip install -r requirements.txt 
 - Then streamlit run app/app.py
 ## 2. Web
-- Go to this web [[WEB]](https://resume-enhancer-123z.streamlit.app/) to use
+- Go to this web [[WEB]](https://resume-enhancer-fowsvbbmikdjgyyv3gynjd.streamlit.app/) to use
